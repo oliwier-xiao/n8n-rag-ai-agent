@@ -90,7 +90,7 @@ https://raw.githubusercontent.com/oliwier-xiao/n8n-rag-ai-agent/main/workflow.js
    CREATE INDEX ON n8n_chat_history (session_id);
    ```
 
-4. (Optional) Create similarity search function:
+4. Create similarity search function:
    ```sql
    CREATE OR REPLACE FUNCTION match_documents (
      query_embedding vector(768),
