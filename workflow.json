@@ -1,0 +1,528 @@
+{
+  "name": "n8n_docs_RAG-AI_Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "months"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -2592,
+        -448
+      ],
+      "id": "7c62292a-5572-4a2c-b2a6-3933e2066912",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "TRUNCATE n8n_docs RESTART IDENTITY;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2368,
+        -448
+      ],
+      "id": "d7ec420c-d42d-4500-a2e9-35e263353e46",
+      "name": "Execute a SQL query"
+    },
+    {
+      "parameters": {
+        "url": "https://api.github.com/repos/n8n-io/n8n-docs/git/trees/main?recursive=1",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2128,
+        -448
+      ],
+      "id": "cb97671d-f199-4235-af2c-f4066af95a3a",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pobierz strukturę drzewa z poprzedniego węzła HTTP Request\nconst tree = $input.first().json.tree;\n\n// Filtrujemy pliki\nconst filteredFiles = tree.filter(item => {\n  if (item.type !== 'blob') return false;\n  if (!item.path.endsWith('.md')) return false;\n  if (!item.path.startsWith('docs/') && item.path !== 'README.md') {\n      return false;\n  }\n  return true;\n});\n\nreturn filteredFiles.map(item => ({ json: item }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1936,
+        -448
+      ],
+      "id": "bb3dba21-6b2c-4584-ad75-2490bbd5c0f3",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "batchSize": 50,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -1600,
+        -464
+      ],
+      "id": "e5e56ba7-9170-4156-b5b1-cb690d18457b",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "operation": "get",
+        "owner": {
+          "__rl": true,
+          "value": "n8n-io",
+          "mode": "list"
+        },
+        "repository": {
+          "__rl": true,
+          "value": "n8n-docs",
+          "mode": "list"
+        },
+        "filePath": "={{ $json.path }}",
+        "asBinaryProperty": false,
+        "additionalParameters": {}
+      },
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+      "position": [
+        -1392,
+        -288
+      ],
+      "id": "55d64b17-f4c7-4106-a3ba-7b43a527755b",
+      "name": "Get a file",
+      "webhookId": "23336fab-ff58-4f45-9fd3-1cc00c15d1a1",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -1952,
+        -256
+      ],
+      "id": "5066bb83-6154-43a4-a00f-e2ca172c5a93",
+      "name": "Wait",
+      "webhookId": "f6305fb9-ad15-47ec-97dc-ad1f5c5e2550"
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $json.content.base64Decode() }}",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "source",
+                "value": "={{ $json.html_url }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        -592,
+        -512
+      ],
+      "id": "298896e9-37aa-44d8-9f7c-1e781c64ad28",
+      "name": "Default Data Loader1"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-embedding-001"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -848,
+        -480
+      ],
+      "id": "714a9d00-2a85-42ef-b275-22e183d83fd4",
+      "name": "Embeddings Google Gemini"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": {
+          "__rl": true,
+          "value": "n8n_docs",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        -896,
+        -688
+      ],
+      "id": "eec14877-89b3-4037-8387-675565681b91",
+      "name": "Supabase Vector Store"
+    },
+    {
+      "parameters": {
+        "availableInChat": true,
+        "agentIcon": {
+          "type": "emoji",
+          "value": "🔨"
+        },
+        "agentName": "N8n helper",
+        "agentDescription": "AI assistant powered by official n8n documentation. Provides accurate technical answers with cited sources. Remembers conversation context.",
+        "suggestedPrompts": {
+          "prompts": []
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -2656,
+        -16
+      ],
+      "id": "30047d56-1bed-46ff-94c3-338950212110",
+      "name": "When chat message received",
+      "webhookId": "19d905a4-1fbd-4d9f-afe4-f24056b1d869"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are an expert automation specialist and the official technical assistant for n8n. Your primary task is to help users build workflows, configure nodes, troubleshoot errors, and use advanced features.\n\nRULES:\n- ALWAYS use the Vector Store Tool to search official documentation\n- NO HALLUCINATIONS - say if info not found\n- CITE YOUR SOURCES with links to source documents\n- Use bold for node names\n- Wrap code in ``` blocks\n- Respond in the user's language\n\nHOW TO USE:\n1. User asks a question\n2. Use vector store tool to find relevant docs\n3. Generate answer with citations\n4. Always cite sources from metadata (source/html_url field)"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -2128,
+        -16
+      ],
+      "id": "e9256a98-df3c-4bcd-812d-96b858c7c831",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -2208,
+        208
+      ],
+      "id": "6696d3a6-f721-4830-bdc2-34e41413e167",
+      "name": "Google Gemini Chat Model"
+    },
+    {
+      "parameters": {
+        "tableName": "n8n_chat_history"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        -2048,
+        208
+      ],
+      "id": "6325b1a1-1fd0-4a69-885c-7198df1a8b7c",
+      "name": "Postgres Chat Memory"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Search engine for official n8n documentation. Use when user asks about: n8n, workflows, nodes, errors, integrations, API, configuration. Returns relevant documentation chunks.",
+        "tableName": {
+          "__rl": true,
+          "value": "n8n_docs",
+          "mode": "list"
+        },
+        "topK": 5,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        -1744,
+        208
+      ],
+      "id": "afa2876d-077e-47f4-a91f-ec3e98ae1bfb",
+      "name": "Supabase Vector Store1"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-embedding-001"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1840,
+        416
+      ],
+      "id": "844d7630-3357-44e5-a44b-bc872b9c602b",
+      "name": "Embeddings Google Gemini1"
+    },
+    {
+      "parameters": {
+        "content": "## 📚 n8n Docs RAG AI Agent\n\nThis workflow:\n1. Scrapes n8n docs from GitHub\n2. Embeds & stores in Supabase\n3. Answers questions via chat\n\n**NEEDED CREDENTIALS:**\n\n🔑 GitHub API\n- Personal Access Token\n\n🔑 Google Gemini (PaLM)\n- API Key\n\n🔑 Supabase API\n- Project URL + Key\n\n🔑 PostgreSQL\n- Connection to same DB as Supabase",
+        "height": 576,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2688,
+        -1072
+      ],
+      "id": "962b6a12-0184-4ad4-b823-fdb24f06ef22",
+      "name": "Setup Info"
+    },
+    {
+      "parameters": {
+        "content": "## 🗄️ SQL Setup - Tables\n\nRun in Supabase SQL Editor:\n\n```sql\n-- 1. Enable vector\nextension vector;\n\n-- 2. Docs table (768 dims)\nCREATE TABLE n8n_docs (\n  id bigserial PRIMARY KEY,\n  content text,\n  metadata jsonb,\n  embedding vector(768)\n);\n\n-- 3. Chat memory\nCREATE TABLE n8n_chat_history (\n  id bigserial PRIMARY KEY,\n  session_id text NOT NULL,\n  message jsonb NOT NULL\n);\n\n-- 4. Indexes\nCREATE INDEX ON n8n_docs \n  USING ivfflat (embedding vector_cosine_ops);\nCREATE INDEX ON n8n_chat_history (session_id);\n```",
+        "height": 592,
+        "width": 528,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2400,
+        -1136
+      ],
+      "id": "fc12f528-ad9b-49d2-b288-fbe7fa5ad8b2",
+      "name": "SQL Setup - Tables"
+    },
+    {
+      "parameters": {
+        "content": "## 🔍 SQL Setup - Search Function\n\n⚠️ REQUIRED - Copy to Supabase SQL Editor:\n\n```sql\nCREATE OR REPLACE FUNCTION match_documents (\n  query_embedding vector(768),\n  match_count int DEFAULT null,\n  filter jsonb DEFAULT '{}'\n) RETURNS TABLE (\n  id bigint,\n  content text,\n  metadata jsonb,\n  similarity float\n)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n  RETURN QUERY\n  SELECT\n    id,\n    content,\n    metadata,\n    1 - (n8n_docs.embedding <=> query_embedding) as similarity\n  FROM n8n_docs\n  WHERE metadata @> filter\n  ORDER BY n8n_docs.embedding <=> query_embedding\n  LIMIT match_count;\nEND;\n$$;\n```\n\n⚠️ This function is REQUIRED for the workflow to work!",
+        "height": 640,
+        "width": 480,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1800,
+        -1136
+      ],
+      "id": "sql-function-note",
+      "name": "SQL Setup - Function"
+    },
+    {
+      "parameters": {
+        "content": "## 💬 Chat Usage\n\n1. Copy webhook URL from \"When chat message received\" node\n\n2. Call via API:\n```bash\ncurl -X POST \"YOUR_WEBHOOK_URL\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"message\": \"How to setup webhook?\"}'\n```\n\n3. The AI will search docs and answer with sources!",
+        "height": 416,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2592,
+        176
+      ],
+      "id": "68824aaa-0b1e-4ca2-9812-70c3d1c1b440",
+      "name": "Chat Usage"
+    },
+    {
+      "parameters": {
+        "content": "## 📥 First Setup\n\n1. Run SQL commands (see SQL Setup note)\n\n2. Create credentials in n8n:\n   - GitHub API\n   - Google Gemini\n   - Supabase\n   - PostgreSQL\n\n3. Connect credentials to nodes\n\n4. Activate \"Schedule Trigger\" workflow FIRST to populate vector store\n\n5. Then activate Chat workflow",
+        "height": 576,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2960,
+        -1072
+      ],
+      "id": "1b662706-8869-4880-a394-220e36b6560e",
+      "name": "First Time Setup"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get a file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a file": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader1": {
+      "ai_document": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Vector Store1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "73f09342-1011-46e6-a7ef-bc77efb3c4ac",
+  "meta": {
+    "instanceId": "9064a3d5b05611db3e71b5355d7fc18c320bd99c72d48abc7b0db150726fecb1"
+  },
+  "id": "eVZGKV0g75MAhGZG",
+  "tags": []
+}
