@@ -146,16 +146,18 @@ In n8n → **Settings → Credentials**, create these:
 }
 ```
 
-#### PostgreSQL
+#### PostgreSQL (Transaction Pooler - Recommended)
 ```json
 {
-  "host": "db.your-project.supabase.co",
+  "host": "aws-xxx-xxx.pooler.supabase.com",
   "database": "postgres",
   "user": "postgres",
   "password": "your-password",
-  "port": 5432
+  "port": 6543
 }
 ```
+
+> 💡 Supabase uses AWS Transaction Pooler (PgBouncer). Use port **6543** for better connection handling. Find your pooler host in Supabase Dashboard → Settings → Database.
 
 ### Step 3: Import Workflow
 

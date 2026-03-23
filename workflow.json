@@ -274,7 +274,7 @@
     },
     {
       "parameters": {
-        "content": "## 📚 n8n Docs RAG AI Agent\n\nThis workflow:\n1. Scrapes n8n docs from GitHub\n2. Embeds & stores in Supabase\n3. Answers questions via chat\n\n**NEEDED CREDENTIALS:**\n\n🔑 GitHub API\n- Personal Access Token\n\n🔑 Google Gemini (PaLM)\n- API Key\n\n🔑 Supabase API\n- Project URL + Key\n\n🔑 PostgreSQL\n- Connection to same DB as Supabase",
+        "content": "## 📚 n8n Docs RAG AI Agent\n\nThis workflow:\n1. Scrapes n8n docs from GitHub\n2. Embeds & stores in Supabase\n3. Answers questions via chat\n\n**NEEDED CREDENTIALS:**\n\n🔑 GitHub API\n- Personal Access Token\n\n🔑 Google Gemini (PaLM)\n- API Key\n\n🔑 Supabase API\n- Project URL + Key\n\n🔑 PostgreSQL\n- Connection: Transaction Pooler (Supabase)\n- Host: aws-xxx-xxx.pooler.supabase.com\n- Port: 6543 (Transaction mode)\n- Use: Connection pooler for better performance",
         "height": 576,
         "color": 4
       },
